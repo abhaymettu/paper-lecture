@@ -63,6 +63,14 @@ holding long term. Six to ten per paper. Every one becomes a card, so each must
 stand alone months later: name the paper in the question, since "how many
 patients?" is useless on a card. Never duplicate a check as a fact.
 
+**Use `focus` to point at what you are talking about.** One entry per sentence of
+narration, in order. As each sentence plays the deck dims the slide and lifts that
+one element, and the sentence appears as a subtitle. Targets are `"big"`,
+`"point:N"` (zero indexed) and `"figure"`; `null` means dim nothing, which is right
+for framing sentences like "Now the problem." Point at the figure exactly when the
+narration says to look at it. Getting the sentence count right matters, so generate
+the audio first and read `audio/cues.json` to see how your text actually split.
+
 **Make `check` questions test understanding, not recall.** A good one is answerable
 from the slide the reader just saw but requires them to do something with it. The
 strongest pattern is a counterfactual: "if X were true instead, would this figure look
@@ -95,6 +103,7 @@ in progress, the last slide should say what this one changes for them specifical
       "figureLabel": "Figure 2",
       "figureNote": "where to look and what it means",
       "narration": "the spoken script, 40 to 90 words",
+      "focus": [null, "big", "point:2", "figure"],   // optional, one per sentence
       "check": {                       // optional
         "q": "question",
         "a": "short answer",

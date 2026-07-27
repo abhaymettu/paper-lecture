@@ -129,14 +129,29 @@ TEMPLATE = r"""<!doctype html>
   .big{background:var(--card);border:1px solid var(--line);border-radius:10px;
        padding:1.2rem 1.3rem;margin:0 0 1.4rem;box-shadow:var(--shadow)}
   .big p{margin:0}
-  @media (max-width:640px){ main{padding:1.2rem .9rem 6rem} h2{font-size:1.3rem} }
+  #cap{position:fixed;left:0;right:0;bottom:3.1rem;display:none;justify-content:center;
+       padding:0 1rem;pointer-events:none;z-index:40}
+  #cap.on{display:flex}
+  #cap span{background:rgba(12,12,14,.92);color:#f4f2ef;max-width:52rem;
+            padding:.55rem .95rem;border-radius:8px;text-align:center;
+            font-family:ui-sans-serif,system-ui,sans-serif;font-size:.95rem;line-height:1.45;
+            box-shadow:0 2px 14px rgba(0,0,0,.35)}
+  /* focus: dim the slide, lift the thing being talked about */
+  .slide.focusing [data-focus]{opacity:.32;transition:opacity .35s ease}
+  .slide.focusing [data-focus].hot{opacity:1}
+  .slide.focusing figure[data-focus].hot{box-shadow:0 0 0 2px var(--accent),var(--shadow)}
+  .slide.focusing li[data-focus].hot{font-weight:600}
+  @media (max-width:640px){ main{padding:1.2rem .9rem 6rem} h2{font-size:1.3rem}
+                            #cap span{font-size:.85rem} }
   @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
 </style></head><body>
 <header><b>__PAPER__</b><span>__VENUE__</span></header>
 <div id="bar"><div></div></div>
 <main id="deck">__SLIDES__</main>
+<div id="cap"><span></span></div>
 <footer>
   <button id="prev">&larr;</button>
+  <button id="cc" title="Toggle subtitles">CC</button>
   <button id="next">&rarr;</button>
   <button id="say">▶ Narrate</button>
   <span class="sp"></span>
@@ -151,6 +166,8 @@ const deck = document.getElementById('deck');
 const slides = [...deck.querySelectorAll('.slide')];
 let i = 0, audio = null;
 const KEY = 'paper-lecture:' + document.title;
+const capEl = document.getElementById('cap');
+let ccOn = localStorage.getItem('paper-lecture:cc') !== 'off';
 const score = JSON.parse(localStorage.getItem(KEY) || '{}');
 
 function show(n){
@@ -166,28 +183,78 @@ function stop(){
   if (audio){ audio.pause(); audio = null; }
   document.getElementById('say').textContent = '▶ Narrate';
 }
+function clearFocus(){
+  slides.forEach(sl => {
+    sl.classList.remove('focusing');
+    sl.querySelectorAll('[data-focus]').forEach(e => e.classList.remove('hot'));
+  });
+  capEl.classList.remove('on');
+  capEl.firstElementChild.textContent = '';
+}
+// Show the sentence being spoken, and lift the one thing it is about.
+function paint(cue){
+  if (!cue) return;
+  if (ccOn){
+    capEl.firstElementChild.textContent = cue.s;
+    capEl.classList.add('on');
+  }
+  const sl = slides[i];
+  const target = cue.f ? sl.querySelector('[data-focus="' + cue.f + '"]') : null;
+  sl.querySelectorAll('[data-focus]').forEach(e => e.classList.remove('hot'));
+  if (target){ sl.classList.add('focusing'); target.classList.add('hot'); }
+  else sl.classList.remove('focusing');
+}
 function narrate(){
+  const cues = (DATA.cues && DATA.cues[i]) || null;
   const t = DATA.narration[i];
   if (!t) return;
   if (audio || speechSynthesis.speaking){ stop(); return; }
-  document.getElementById('say').textContent = '■ Stop';
+  document.getElementById('say').textContent = '\u25a0 Stop';
+
   if (DATA.audio && DATA.audio[i]){
     audio = new Audio(DATA.audio[i]);
-    audio.onended = () => { audio = null; document.getElementById('say').textContent = '▶ Narrate'; };
+    if (cues){
+      let last = -1;
+      audio.ontimeupdate = () => {
+        const now = audio.currentTime;
+        let k = cues.findIndex(c => now >= c.t && now < c.t + c.d);
+        if (k === -1 && now >= cues[cues.length-1].t) k = cues.length - 1;
+        if (k !== -1 && k !== last){ last = k; paint(cues[k]); }
+      };
+    }
+    audio.onended = () => { audio = null; clearFocus();
+                            document.getElementById('say').textContent = '\u25b6 Narrate'; };
     audio.play();
-  } else {
-    const u = new SpeechSynthesisUtterance(t);
+    return;
+  }
+
+  // Browser voice: no timeline, so speak one sentence at a time and advance
+  // the caption as each finishes. Same cue list, so focus still works.
+  const list = cues || [{s: t, f: null}];
+  let k = 0;
+  const speakNext = () => {
+    if (k >= list.length){ clearFocus();
+                           document.getElementById('say').textContent = '\u25b6 Narrate'; return; }
+    paint(list[k]);
+    const u = new SpeechSynthesisUtterance(list[k].s);
     u.rate = 1.0;
-    // ponytail: browser voice by default. narrate.py pre-renders nicer audio if you want it.
     const v = speechSynthesis.getVoices().find(v => /Samantha|Ava|Serena|Daniel/.test(v.name));
     if (v) u.voice = v;
-    u.onend = () => { document.getElementById('say').textContent = '▶ Narrate'; };
+    u.onend = () => { k++; speakNext(); };
     speechSynthesis.speak(u);
-  }
+  };
+  speakNext();
 }
 document.getElementById('prev').onclick = () => show(i - 1);
 document.getElementById('next').onclick = () => show(i + 1);
 document.getElementById('say').onclick = narrate;
+document.getElementById('cc').onclick = () => {
+  ccOn = !ccOn;
+  localStorage.setItem('paper-lecture:cc', ccOn ? 'on' : 'off');
+  document.getElementById('cc').style.opacity = ccOn ? 1 : .45;
+  if (!ccOn) capEl.classList.remove('on');
+};
+document.getElementById('cc').style.opacity = ccOn ? 1 : .45;
 document.addEventListener('keydown', e => {
   if (e.key === 'ArrowRight') show(i + 1);
   else if (e.key === 'ArrowLeft') show(i - 1);
@@ -259,14 +326,15 @@ def build_slide(s, figdir):
         out.append(f'<div class="kicker">{esc(s["kicker"])}</div>')
     out.append(f'<h2>{esc(s["title"])}</h2>')
     if s.get("big"):
-        out.append(f'<div class="big"><p>{esc(s["big"])}</p></div>')
+        out.append(f'<div class="big" data-focus="big"><p>{esc(s["big"])}</p></div>')
     if s.get("points"):
-        out.append("<ul>" + "".join(f"<li>{esc(p)}</li>" for p in s["points"]) + "</ul>")
+        out.append("<ul>" + "".join(
+            f'<li data-focus="point:{n}">{esc(p)}</li>' for n, p in enumerate(s["points"])) + "</ul>")
     if s.get("figure"):
         path = os.path.join(figdir, s["figure"])
         if os.path.exists(path):
             cap = f'<b>{esc(s.get("figureLabel", "Figure"))}.</b> {esc(s.get("figureNote", ""))}'
-            out.append(f'<figure><img alt="{esc(s.get("figureLabel",""))}" '
+            out.append(f'<figure data-focus="figure"><img alt="{esc(s.get("figureLabel",""))}" '
                        f'src="{b64_png(path)}"><figcaption>{cap}</figcaption></figure>')
         else:
             print(f"  warning: missing figure {s['figure']}", file=sys.stderr)
@@ -305,7 +373,14 @@ def main():
         if any(clips):
             audio = [b64_audio(p) if p else None for p in clips]
 
-    data = {"narration": [s.get("narration", "") for s in slides], "audio": audio}
+    cues = None
+    cue_path = os.path.join(audio_dir, "cues.json")
+    if os.path.exists(cue_path):
+        raw = json.load(open(cue_path))
+        cues = [raw.get(str(n)) for n in range(len(slides))]
+
+    data = {"narration": [s.get("narration", "") for s in slides],
+            "audio": audio, "cues": cues}
     paper = lesson.get("paper", {})
     page = (TEMPLATE
             .replace("__TITLE__", esc(paper.get("title", "Lecture")))
@@ -315,7 +390,9 @@ def main():
             .replace("__DATA__", js_json(data)))
     open(out, "w").write(page)
     kb = os.path.getsize(out) // 1024
-    print(f"{len(slides)} slides, audio={'inlined' if audio else 'browser voice'} -> {out} ({kb} KB)")
+    subs = sum(len(c) for c in (cues or []) if c)
+    print(f"{len(slides)} slides, audio={'inlined' if audio else 'browser voice'}, "
+          f"{subs} subtitle cues -> {out} ({kb} KB)")
 
 
 if __name__ == "__main__":

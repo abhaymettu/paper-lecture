@@ -23,6 +23,7 @@ Engines, best first:
 """
 import argparse
 import json
+import re
 import os
 import shutil
 import subprocess
@@ -58,7 +59,17 @@ def to_m4a(wav, m4a):
     return wav
 
 
+def sentences(text):
+    """Split narration for subtitling. Narration is written to be spoken, so
+    plain end-punctuation splitting is enough; no abbreviation handling needed."""
+    parts = re.split(r'(?<=[.!?])\s+(?=[A-Z"“])', text.strip())
+    return [p.strip() for p in parts if p.strip()]
+
+
 def synth_kokoro(texts, out, voice, speed):
+    """Synthesise a sentence at a time so each caption gets a real timestamp,
+    then join the clips into one file per slide."""
+    import numpy as np
     import soundfile as sf
     from kokoro_onnx import Kokoro
 
@@ -66,12 +77,24 @@ def synth_kokoro(texts, out, voice, speed):
     if voice not in k.get_voices():
         sys.exit(f"voice {voice!r} unknown. Available: {', '.join(sorted(k.get_voices()))}")
     print(f"engine: kokoro   voice: {voice}   speed: {speed}")
-    made = []
-    for n, text in texts:
-        samples, rate = k.create(text, voice=voice, speed=speed, lang="en-us")
+
+    made, cues = [], {}
+    for n, text, focus in texts:
+        chunks, marks, t = [], [], 0.0
+        for s in sentences(text):
+            samples, rate = k.create(s, voice=voice, speed=speed, lang="en-us")
+            dur = len(samples) / rate
+            marks.append({"t": round(t, 3), "d": round(dur, 3), "s": s,
+                          "f": focus[len(marks)] if len(marks) < len(focus) else None})
+            chunks.append(samples)
+            t += dur
+        joined = np.concatenate(chunks) if chunks else np.zeros(1)
         wav = os.path.join(out, f"{n:02d}.wav")
-        sf.write(wav, samples, rate)
+        sf.write(wav, joined, rate)
+        cues[n] = marks
         made.append((n, to_m4a(wav, os.path.join(out, f"{n:02d}.m4a")), text))
+
+    json.dump(cues, open(os.path.join(out, "cues.json"), "w"))
     return made
 
 
@@ -93,7 +116,7 @@ def synth_say(texts, out, voice, speed):
     rate = int(180 * speed)
     print(f"engine: say   voice: {voice}   rate: {rate} wpm")
     made = []
-    for n, text in texts:
+    for n, text, _focus in texts:
         aiff = os.path.join(out, f"{n:02d}.aiff")
         subprocess.run(["say", "-v", voice, "-r", str(rate), "-o", aiff, text], check=True)
         made.append((n, to_m4a(aiff, os.path.join(out, f"{n:02d}.m4a")), text))
@@ -114,7 +137,7 @@ def main():
     out = os.path.join(base, "audio")
     os.makedirs(out, exist_ok=True)
 
-    texts = [(n, s["narration"].strip())
+    texts = [(n, s["narration"].strip(), s.get("focus", []))
              for n, s in enumerate(lesson["slides"]) if s.get("narration", "").strip()]
     if not texts:
         sys.exit("no narration in this lesson")

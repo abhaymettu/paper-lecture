@@ -62,8 +62,15 @@ Or by hand:
 .venv/bin/python bin/render.py build/paper/lesson.json  # -> lecture.html
 ```
 
-Open `lecture.html`. Arrow keys move, space narrates, enter reveals an answer, click a
-figure to zoom.
+Open `lecture.html`. Arrow keys move, space narrates, click a figure to zoom, CC
+toggles subtitles.
+
+While narration plays, each spoken sentence appears as a subtitle and the slide dims
+everything except the thing that sentence is about. Timings are real: `narrate.py`
+synthesises a sentence at a time and records each duration, rather than estimating.
+
+Answers stay locked until you type an attempt. Recognising a correct answer feels like
+knowing it and builds little memory; producing one, even wrongly, is what sticks.
 
 ## How the figure extraction works
 
