@@ -6,7 +6,11 @@ Writes <outdir>/text.md, <outdir>/figNN.png, <outdir>/figures.json
 
 Figures are found by clustering the non-text ink on each page and giving every
 caption its nearest cluster. Captions sit above, below, or beside their artwork
-depending on the journal, so anything directional gets it wrong somewhere.
+depending on the journal, so for figures nothing directional is assumed.
+
+Tables are the weaker path: they are set as text, so there is no ink to cluster
+and table_rect falls back to cropping downward from the caption. A journal that
+puts table captions underneath will crop wrong.
 """
 import json
 import math
@@ -16,24 +20,54 @@ import sys
 
 import fitz
 
-CAPTION = re.compile(r"^\s*(Fig(?:ure|\.)?|Table)\s*\.?\s*(\d+)", re.I)
+LABEL = re.compile(r"^\s*(Fig(?:ure|\.)?|Table)\s*\.?\s*(\d+)", re.I)
+# What follows the number tells a caption apart from a sentence that merely
+# mentions one. Captions continue with punctuation or a capitalised word
+# ("Table 1 Number of symptoms", "Fig. 1. Model simulations"); in-body
+# references continue with a verb ("Table 1 lists in how many scales...").
+# PyMuPDF sometimes splits such a fragment into its own block, which is how
+# they get mistaken for captions in the first place.
+CAPTION_TAIL_OK = ".:;|)—–-"
+
+
+def caption_match(text):
+    """Return (kind, number) if this block opens a real caption, else None."""
+    m = LABEL.match(text)
+    if not m:
+        return None
+    tail = text[m.end():].lstrip()
+    if tail and not (tail[0] in CAPTION_TAIL_OK or tail[0].isupper() or tail[0].isdigit()):
+        return None
+    return m.group(1).lower().rstrip("."), m.group(2)
+
+
 DPI = 200
 GAP = 18          # pt; ink closer than this is part of the same figure
 PAD = 5           # pt of breathing room around the final crop
 
 
 def captions(page):
-    out = []
+    """Caption blocks on this page, one per label.
+
+    A page can still yield two blocks claiming the same label (a stray fragment
+    alongside the real thing). The real caption is the wordier one, so keep that.
+    """
+    found = {}
     for x0, y0, x1, y1, text, *_ in page.get_text("blocks"):
-        m = CAPTION.match(text)
-        if m:
-            out.append({
-                "kind": m.group(1).lower().rstrip("."),
-                "num": m.group(2),
-                "rect": fitz.Rect(x0, y0, x1, y1),
-                "caption": " ".join(text.split())[:600],
-            })
-    return out
+        hit = caption_match(text)
+        if not hit:
+            continue
+        kind, num = hit
+        cap = {
+            "kind": kind,
+            "num": num,
+            "rect": fitz.Rect(x0, y0, x1, y1),
+            "caption": " ".join(text.split())[:600],
+        }
+        prev = found.get(hit)
+        if prev is None or len(cap["caption"]) > len(prev["caption"]):
+            found[hit] = cap
+    return sorted(found.values(), key=lambda c: (c["rect"].y0, c["rect"].x0))
 
 
 def ink(page):
@@ -96,7 +130,7 @@ def table_rect(page, cap):
     pr, cr = page.rect, cap["rect"]
     hi = pr.y1
     for b in sorted(page.get_text("blocks"), key=lambda b: b[1]):
-        if b[1] > cr.y1 + 6 and len(b[4].strip()) > 300 and not CAPTION.match(b[4]):
+        if b[1] > cr.y1 + 6 and len(b[4].strip()) > 300 and not caption_match(b[4]):
             hi = b[1] - 4
             break
     r = fitz.Rect(max(pr.x0, cr.x0 - 20), cr.y1 + 2, min(pr.x1, cr.x1 + 20), hi)
