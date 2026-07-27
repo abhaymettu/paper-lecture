@@ -137,9 +137,42 @@ def table_rect(page, cap):
     return r if r.height > 40 else None
 
 
-def assign(page, caps):
+def grow_to_labels(page, rect, cap_rect, blobs, margin=28):
+    """Expand a crop to take in the axis labels sitting just outside the artwork.
+
+    Tick numbers and axis titles land outside the main ink cluster: sometimes as
+    text blocks, sometimes as their own small cluster of vector glyphs a hair
+    beyond the merge threshold. Either way, a bar chart cropped without its y
+    axis is a picture of some bars.
+
+    Only small neighbours are absorbed, which keeps body paragraphs and adjacent
+    figures out.
+    """
+    grown = fitz.Rect(rect)
+    near = rect + (-margin, -margin, margin, margin)
+    area = rect.get_area()
+
+    for x0, y0, x1, y1, text, *_ in page.get_text("blocks"):
+        t = text.strip()
+        if not t or len(t) > 60 or caption_match(text):
+            continue
+        b = fitz.Rect(x0, y0, x1, y1)
+        if b.intersects(cap_rect) or not b.intersects(near) or b.get_area() > area:
+            continue
+        grown |= b
+
+    for b in blobs:                              # stray glyph clusters, e.g. tick numbers
+        if b in rect or not b.intersects(near):
+            continue
+        if b.get_area() < 0.15 * area and not b.intersects(cap_rect):
+            grown |= b
+
+    return grown & page.rect
+
+
+def assign(caps, blobs):
     """Give each caption the ink cluster nearest to it, one cluster per caption."""
-    blobs = [c for c in cluster(ink(page)) if c.width > 60 and c.height > 40]
+    blobs = [b for b in blobs if b.width > 60 and b.height > 40]
     pairs = sorted(
         ((gap_between(c["rect"], b), ci, bi)
          for ci, c in enumerate(caps) for bi, b in enumerate(blobs)),
@@ -170,13 +203,15 @@ def main():
         caps = captions(page)
         if not caps:
             continue
-        art = assign(page, caps)
+        blobs = cluster(ink(page))
+        art = assign(caps, blobs)
         for ci, cap in enumerate(caps):
             if cap["kind"].startswith("tab"):
                 r = table_rect(page, cap)
             else:
                 r = art.get(ci)
                 if r is not None:
+                    r = grow_to_labels(page, r, cap["rect"], blobs)
                     r = (r + (-PAD, -PAD, PAD, PAD)) & page.rect
             if r is None or r.width < 60 or r.height < 40:
                 continue
