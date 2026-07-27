@@ -117,6 +117,14 @@ in progress, the last slide should say what this one changes for them specifical
 Titles that assert beat titles that label. "Every result here is between people, not
 within a person" lands; "Limitations" does not.
 
+## When they come back with questions
+
+The deck collects questions per slide and the reader pastes them back. Treat a
+question as evidence about the lesson, not only about the reader. If someone asks
+what a term means, the slide used it without earning it. If they ask why a step
+follows, the slide asserted instead of arguing. Answer the question first, then say
+plainly which slides you would rewrite and offer to rebuild.
+
 ## Reasoning effort
 
 Extraction and rendering are mechanical. Authoring the lesson is not: it means holding

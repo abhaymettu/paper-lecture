@@ -70,6 +70,10 @@ While narration plays, each spoken sentence appears as a subtitle and the slide 
 everything except the thing that sentence is about. Timings are real: `narrate.py`
 synthesises a sentence at a time and records each duration, rather than estimating.
 
+Stuck on a slide, press `?`. The question is saved with the slide it came from, and
+"Copy questions" puts the lot on your clipboard as a prompt you paste back to Claude.
+A static page cannot answer you; this at least stops the question evaporating.
+
 Answers stay locked until you type an attempt. Recognising a correct answer feels like
 knowing it and builds little memory; producing one, even wrongly, is what sticks.
 

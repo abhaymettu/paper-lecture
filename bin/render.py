@@ -126,6 +126,16 @@ TEMPLATE = r"""<!doctype html>
         align-items:center;justify-content:center;z-index:50;cursor:zoom-out;padding:2rem}
   #zoom.on{display:flex}
   #zoom img{max-width:100%;max-height:100%;object-fit:contain}
+  #askwrap{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;
+           align-items:center;justify-content:center;z-index:60;padding:1.5rem}
+  #askwrap.on{display:flex}
+  #askbox{background:var(--card);border:1px solid var(--line);border-radius:12px;
+          padding:1.3rem;max-width:38rem;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+  #askbox p{margin:0 0 .8rem}
+  #askbox textarea{width:100%;padding:.7rem;border-radius:7px;border:1px solid var(--line);
+                   background:var(--bg);color:var(--fg);font:inherit;font-size:.95rem;resize:vertical}
+  .askrow{display:flex;gap:.5rem;margin-top:.9rem}
+  #askcopy[hidden]{display:none}
   .big{background:var(--card);border:1px solid var(--line);border-radius:10px;
        padding:1.2rem 1.3rem;margin:0 0 1.4rem;box-shadow:var(--shadow)}
   .big p{margin:0}
@@ -154,12 +164,24 @@ TEMPLATE = r"""<!doctype html>
   <button id="cc" title="Toggle subtitles">CC</button>
   <button id="next">&rarr;</button>
   <button id="say">▶ Narrate</button>
+  <button id="ask" title="Ask about this slide">? Ask</button>
+  <button id="askcopy" title="Copy every question for Claude">Copy questions</button>
   <span class="sp"></span>
   <span id="score" class="hint"></span>
   <span class="hint">&larr;&rarr; move · space play/pause · CC subtitles · click figure to zoom</span>
   <span id="pos"></span>
 </footer>
 <div id="zoom"><img alt=""></div>
+<div id="askwrap">
+  <div id="askbox">
+    <p>What is confusing about <b id="askslide"></b>?</p>
+    <textarea id="askq" rows="3" placeholder="Say it however it comes out. Half-formed is fine, that is usually where the confusion actually is."></textarea>
+    <div class="askrow">
+      <button id="asksave">Save question</button>
+      <button id="askcancel">Cancel</button>
+    </div>
+  </div>
+</div>
 <script>
 const DATA = __DATA__;
 const deck = document.getElementById('deck');
@@ -274,6 +296,8 @@ document.getElementById('cc').style.opacity = ccOn ? 1 : .45;
 document.addEventListener('keydown', e => {
   // The quiz box needs its own spacebar.
   if (e.target.matches('textarea, input, [contenteditable]')) return;
+  if (e.key === '?' || (e.key === '/' && e.shiftKey)){ e.preventDefault(); openAsk(); return; }
+  if (e.key === 'Escape' && askWrap.classList.contains('on')){ closeAsk(); return; }
   if (e.key === 'ArrowRight') show(i + 1);
   else if (e.key === 'ArrowLeft') show(i - 1);
   else if (e.key === ' '){ e.preventDefault(); toggle(); }
@@ -317,6 +341,55 @@ function tally(){
   el.textContent = 'recalled ' + vals.filter(v => v).length + '/' + vals.length;
 }
 document.getElementById('zoom').onclick = e => e.currentTarget.classList.remove('on');
+// Asking a question is the thing a static lecture cannot do. So capture it with
+// the slide it belongs to and hand the whole lot back to Claude in one paste.
+const QKEY = KEY + ':questions';
+let questions = JSON.parse(localStorage.getItem(QKEY) || '[]');
+const askWrap = document.getElementById('askwrap');
+const askQ = document.getElementById('askq');
+
+function refreshAsk(){
+  const b = document.getElementById('askcopy');
+  b.hidden = questions.length === 0;
+  b.textContent = 'Copy ' + questions.length + ' question' + (questions.length === 1 ? '' : 's');
+}
+function openAsk(){
+  document.getElementById('askslide').textContent = slides[i].querySelector('h2').textContent;
+  askQ.value = '';
+  askWrap.classList.add('on');
+  askQ.focus();
+}
+function closeAsk(){ askWrap.classList.remove('on'); }
+
+document.getElementById('ask').onclick = openAsk;
+document.getElementById('askcancel').onclick = closeAsk;
+document.getElementById('asksave').onclick = () => {
+  const q = askQ.value.trim();
+  if (!q) { closeAsk(); return; }
+  questions.push({n: i + 1, slide: slides[i].querySelector('h2').textContent, q: q});
+  localStorage.setItem(QKEY, JSON.stringify(questions));
+  refreshAsk();
+  closeAsk();
+};
+document.getElementById('askcopy').onclick = async () => {
+  const lines = questions.map(x => '- Slide ' + x.n + ', "' + x.slide + '"\n  ' + x.q);
+  const text = 'I went through the lecture on ' + DATA.paper +
+    ' and got stuck on these. Answer each one, and tell me if any of them mean a slide '
+    + 'is badly explained rather than me missing something.\n\n' + lines.join('\n');
+  try {
+    await navigator.clipboard.writeText(text);
+    const b = document.getElementById('askcopy');
+    const old = b.textContent; b.textContent = 'Copied, paste to Claude';
+    setTimeout(() => { b.textContent = old; }, 2200);
+  } catch (err) {
+    // clipboard is blocked on file:// in some browsers; show it to copy by hand
+    askQ.value = text; document.getElementById('askslide').textContent = 'all slides';
+    askWrap.classList.add('on'); askQ.select();
+  }
+};
+askWrap.onclick = e => { if (e.target === askWrap) closeAsk(); };
+
+refreshAsk();
 tally();
 show(0);
 </script></body></html>"""
@@ -391,6 +464,7 @@ def main():
         if any(clips):
             audio = [b64_audio(p) if p else None for p in clips]
 
+    paper = lesson.get("paper", {})
     cues = None
     cue_path = os.path.join(audio_dir, "cues.json")
     if os.path.exists(cue_path):
@@ -398,8 +472,8 @@ def main():
         cues = [raw.get(str(n)) for n in range(len(slides))]
 
     data = {"narration": [s.get("narration", "") for s in slides],
-            "audio": audio, "cues": cues}
-    paper = lesson.get("paper", {})
+            "audio": audio, "cues": cues,
+            "paper": paper.get("short") or paper.get("title", "this paper")}
     page = (TEMPLATE
             .replace("__TITLE__", esc(paper.get("title", "Lecture")))
             .replace("__PAPER__", esc(paper.get("short", paper.get("title", ""))))
