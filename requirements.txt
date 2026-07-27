@@ -1,5 +1,8 @@
 pymupdf>=1.24
 
+# optional, for bin/deck.py (Anki export)
+genanki>=0.13
+
 # optional, for narrate.py --engine kokoro (neural voice, local, no torch)
 kokoro-onnx>=0.4
 soundfile>=0.12

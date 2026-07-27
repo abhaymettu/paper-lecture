@@ -25,6 +25,9 @@ python bin/narrate.py build/paper/lesson.json
 
 # 4. render to one self-contained file
 python bin/render.py build/paper/lesson.json
+
+# 5. build an Anki deck so it survives past today
+python bin/deck.py build/paper/lesson.json
 ```
 
 Read the figures with the Read tool. They are images and you can see them. Do this
@@ -54,6 +57,12 @@ these two columns" teaches. "Figure 2 shows autocorrelation and variance" does n
 citation numbers, no symbols a voice cannot say: write "n equals 535" and "minus 0.83".
 It should complement the slide, not read the bullets back.
 
+**Write `facts` for what should be known cold.** Checks teach understanding
+during the lecture; facts are the numbers, definitions and positions worth
+holding long term. Six to ten per paper. Every one becomes a card, so each must
+stand alone months later: name the paper in the question, since "how many
+patients?" is useless on a card. Never duplicate a check as a fact.
+
 **Make `check` questions test understanding, not recall.** A good one is answerable
 from the slide the reader just saw but requires them to do something with it. The
 strongest pattern is a counterfactual: "if X were true instead, would this figure look
@@ -73,6 +82,9 @@ in progress, the last slide should say what this one changes for them specifical
     "venue": "Journal 12(3) 45-67",
     "file": "original.pdf"
   },
+  "facts": [                           // optional, becomes Anki cards
+    {"q": "atomic question", "a": "the thing to know cold"}
+  ],
   "slides": [
     {
       "kicker": "The claim",           // optional, 1-3 words, section label

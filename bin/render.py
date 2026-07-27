@@ -100,8 +100,18 @@ TEMPLATE = r"""<!doctype html>
   .check p{margin:0 0 .8rem;font-weight:600}
   .check .ans{display:none;border-top:1px solid var(--line);padding-top:.8rem;margin-top:.3rem}
   .check.open .ans{display:block;animation:fade .3s}
-  .check.open button{display:none}
+  .check.open > button{display:none}
   .check .ans b{color:var(--ok)}
+  .check textarea{width:100%;margin:0 0 .7rem;padding:.6rem .7rem;border-radius:6px;
+                  border:1px solid var(--line);background:var(--bg);color:var(--fg);
+                  font:inherit;font-size:.92rem;resize:vertical}
+  .check textarea:focus{outline:none;border-color:var(--accent)}
+  .check.open textarea{opacity:.6}
+  button[disabled]{opacity:.4;cursor:not-allowed}
+  .grade{display:flex;gap:.5rem;align-items:center;margin-top:.9rem;
+         font-family:ui-sans-serif,system-ui,sans-serif;font-size:.8rem;color:var(--dim)}
+  .check.graded .grade{display:none}
+  .verdict{margin-top:.9rem;font-family:ui-sans-serif,system-ui,sans-serif;font-size:.8rem}
   button{font:inherit;font-family:ui-sans-serif,system-ui,sans-serif;font-size:.82rem;
          padding:.42rem .9rem;border:1px solid var(--line);background:var(--card);
          color:var(--fg);border-radius:6px;cursor:pointer}
@@ -130,7 +140,8 @@ TEMPLATE = r"""<!doctype html>
   <button id="next">&rarr;</button>
   <button id="say">▶ Narrate</button>
   <span class="sp"></span>
-  <span class="hint">&larr;&rarr; move · space narrate · enter reveal · click figure to zoom</span>
+  <span id="score" class="hint"></span>
+  <span class="hint">&larr;&rarr; move · space narrate · click figure to zoom</span>
   <span id="pos"></span>
 </footer>
 <div id="zoom"><img alt=""></div>
@@ -139,6 +150,8 @@ const DATA = __DATA__;
 const deck = document.getElementById('deck');
 const slides = [...deck.querySelectorAll('.slide')];
 let i = 0, audio = null;
+const KEY = 'paper-lecture:' + document.title;
+const score = JSON.parse(localStorage.getItem(KEY) || '{}');
 
 function show(n){
   stop();
@@ -179,11 +192,16 @@ document.addEventListener('keydown', e => {
   if (e.key === 'ArrowRight') show(i + 1);
   else if (e.key === 'ArrowLeft') show(i - 1);
   else if (e.key === ' '){ e.preventDefault(); narrate(); }
-  else if (e.key === 'Enter'){
-    const c = slides[i].querySelector('.check');
-    if (c) c.classList.add('open');
-  }
   else if (e.key === 'Escape') document.getElementById('zoom').classList.remove('on');
+});
+// Retrieval practice: you have to produce an answer before you can see one.
+// Recognising a correct answer feels like knowing it and does not stick;
+// generating one, even wrongly, is what builds the memory.
+deck.addEventListener('input', e => {
+  if (e.target.tagName === 'TEXTAREA'){
+    const b = e.target.closest('.check').querySelector('button[data-reveal]');
+    b.disabled = e.target.value.trim().length < 8;
+  }
 });
 deck.addEventListener('click', e => {
   if (e.target.tagName === 'IMG'){
@@ -192,8 +210,29 @@ deck.addEventListener('click', e => {
     z.classList.add('on');
   }
   if (e.target.dataset.reveal) e.target.closest('.check').classList.add('open');
+  if (e.target.dataset.grade){
+    const c = e.target.closest('.check');
+    const missed = e.target.dataset.grade === 'miss';
+    c.classList.add('graded');
+    const v = document.createElement('div');
+    v.className = 'verdict';
+    v.textContent = missed
+      ? 'Marked for review. This one goes in the Anki deck at the top of the pile.'
+      : 'Good. It still needs a second pass in a few days to hold.';
+    c.querySelector('.ans').appendChild(v);
+    score[slides.indexOf(c.closest('.slide'))] = missed ? 0 : 1;
+    localStorage.setItem(KEY, JSON.stringify(score));
+    tally();
+  }
 });
+function tally(){
+  const vals = Object.values(score);
+  const el = document.getElementById('score');
+  if (!vals.length){ el.textContent = ''; return; }
+  el.textContent = 'recalled ' + vals.filter(v => v).length + '/' + vals.length;
+}
 document.getElementById('zoom').onclick = e => e.currentTarget.classList.remove('on');
+tally();
 show(0);
 </script></body></html>"""
 
@@ -235,9 +274,14 @@ def build_slide(s, figdir):
         c = s["check"]
         out.append(
             '<div class="check"><p>' + esc(c["q"]) + "</p>"
-            '<button data-reveal="1">Show answer</button>'
+            '<textarea rows="2" placeholder="Answer from memory first. Typing it is '
+            'what makes it stick, even if you are wrong."></textarea>'
+            '<button data-reveal="1" disabled>Show answer</button>'
             '<div class="ans"><p><b>' + esc(c["a"]) + "</b></p>"
             + (f"<p>{esc(c['why'])}</p>" if c.get("why") else "")
+            + '<div class="grade"><span>Did you have it?</span>'
+              '<button data-grade="got">Yes</button>'
+              '<button data-grade="miss">No</button></div>'
             + "</div></div>")
     out.append("</section>")
     return "".join(out)
