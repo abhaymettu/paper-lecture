@@ -33,8 +33,17 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ln -s "$PWD/skills/paper-lecture" ~/.claude/skills/paper-lecture
 ```
 
-macOS gets nicer narration via the built-in `say` command. Everywhere else the deck
-falls back to the browser's speech synthesis, which needs nothing installed.
+For narration, the deck falls back to your browser's speech synthesis with nothing
+installed at all. For a voice you would actually listen to, fetch the Kokoro weights
+once:
+
+```bash
+bin/get-kokoro.sh    # ~340 MB, local, no torch, no API
+```
+
+macOS `say` is the third option (`--engine say`). Its stock voices sound like a screen
+reader; the Premium voices under System Settings > Accessibility > Spoken Content are
+much better and `narrate.py` picks them up automatically once installed.
 
 ## Use
 
