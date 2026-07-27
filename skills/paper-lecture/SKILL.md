@@ -46,6 +46,33 @@ within-person process. Locating that is the highest-value thing you do here. Giv
 its own slide, late, once the reader has enough to feel the force of it. If a paper
 genuinely has no such weakness, say so plainly rather than manufacturing one.
 
+**Build the intuition before you name it.** This is the rule that matters most and
+the one most easily broken, because a compressed line reads as authoritative to the
+person who already understands it and as noise to everyone else.
+
+A real failure from the first lecture written with this skill. The slide said:
+
+> Without a baseline, 1,030 is a number, not a finding.
+
+The reader could not parse it. That line asserts a conclusion and leans on "baseline"
+as though the word explained itself, when that word was the entire confusion. What
+worked instead took fifteen seconds: a parking lot holding 1,030 licence plates is
+unremarkable if there are 1,030 cars and bizarre if there are 50,000. The count did
+not change, the thing you compared it to did. Only then is the term worth naming.
+
+So:
+
+- Concrete everyday case, then the paper's case, then the term. Never the reverse.
+- Never use a technical term in a line that has not earned it. Baseline, latent
+  factor, autocorrelation, dichotomisation, rho: each needs its fifteen seconds.
+- Treat aphorisms as a failure signal. If a bullet would look good on a conference
+  slide, it is probably asserting rather than teaching.
+- A counterintuitive claim needs a worked example, not a bullet. "Random data produce
+  more distinct profiles than structured data" is true, surprising, and useless
+  stated flat.
+- Test every line: could someone who does not already know the point learn it from
+  this alone? If it only lands for someone who already agrees, rewrite it.
+
 **Quote the paper's own hedges.** Authors usually flag their weakest result somewhere
 in the discussion. Readers skip it. Surfacing it is free credibility and free teaching.
 
