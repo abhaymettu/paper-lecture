@@ -1,14 +1,25 @@
 #!/usr/bin/env python3
-"""Pre-render each slide's narration to audio with the macOS `say` command.
+"""Pre-render each slide's narration to audio.
 
-Usage: narrate.py <lesson.json> [--voice NAME] [--rate WPM]
+Usage: narrate.py <lesson.json> [--engine auto|kokoro|say] [--voice V] [--speed S]
 
 Writes <lesson dir>/audio/NN.m4a, which render.py picks up automatically.
-Skip this entirely and the deck narrates with the browser's built-in voice,
-which costs nothing and needs no files. Use this when you want the nicer
-macOS voices, or an offline deck that sounds the same on every machine.
+Skip this step entirely and the deck narrates with the browser's built-in voice,
+which costs nothing and needs no files.
 
-macOS only: `say` and `afconvert` both ship with the OS.
+Engines, best first:
+
+  kokoro  Kokoro-82M, a small neural TTS running locally through onnxruntime.
+          No torch, no API, no network once the weights are cached. This is the
+          one that does not sound like a screen reader.
+              pip install kokoro-onnx soundfile
+              bin/get-kokoro.sh          # ~340 MB of weights, one time
+
+  say     The macOS built-in. Free and always there, but the stock voices are
+          rough. macOS ships better ones on request: System Settings >
+          Accessibility > Spoken Content > System Voice > Manage Voices, then
+          download a Premium voice such as Ava or Zoe. This script prefers those
+          automatically once they exist.
 """
 import argparse
 import json
@@ -17,40 +28,85 @@ import shutil
 import subprocess
 import sys
 
-# Best-sounding stock voices, in order. Premium variants need a one-time
-# download in System Settings > Accessibility > Spoken Content.
-PREFERRED = ["Ava (Premium)", "Serena (Premium)", "Zoe (Premium)", "Ava", "Samantha", "Daniel"]
+MODEL_DIR = os.environ.get("KOKORO_MODEL_DIR", os.path.expanduser("~/.cache/paper-lecture"))
+MODEL = os.path.join(MODEL_DIR, "kokoro-v1.0.onnx")
+VOICES = os.path.join(MODEL_DIR, "voices-v1.0.bin")
+
+KOKORO_DEFAULT = "af_heart"
+# Stock macOS voices are rough; the Premium downloads are markedly better.
+SAY_PREFERRED = ["Ava (Premium)", "Zoe (Premium)", "Serena (Premium)", "Evan (Enhanced)",
+                 "Ava", "Samantha", "Daniel"]
 
 
-def available_voices():
-    out = subprocess.run(["say", "-v", "?"], capture_output=True, text=True).stdout
-    return [line.split("  ")[0].strip() for line in out.splitlines() if line.strip()]
+def kokoro_ready():
+    if not (os.path.exists(MODEL) and os.path.exists(VOICES)):
+        return False
+    try:
+        import kokoro_onnx, soundfile  # noqa: F401
+        return True
+    except ImportError:
+        return False
 
 
-def pick_voice(requested):
-    voices = available_voices()
-    if requested:
-        if requested not in voices:
-            sys.exit(f"voice {requested!r} not installed. Try: say -v '?'")
-        return requested
-    for v in PREFERRED:
-        if v in voices:
-            return v
-    return voices[0] if voices else sys.exit("no voices found")
+def to_m4a(wav, m4a):
+    """Shrink to m4a when afconvert is around, otherwise keep the wav."""
+    if shutil.which("afconvert"):
+        subprocess.run(["afconvert", "-f", "m4af", "-d", "aac", wav, m4a],
+                       check=True, capture_output=True)
+        os.remove(wav)
+        return m4a
+    return wav
+
+
+def synth_kokoro(texts, out, voice, speed):
+    import soundfile as sf
+    from kokoro_onnx import Kokoro
+
+    k = Kokoro(MODEL, VOICES)
+    if voice not in k.get_voices():
+        sys.exit(f"voice {voice!r} unknown. Available: {', '.join(sorted(k.get_voices()))}")
+    print(f"engine: kokoro   voice: {voice}   speed: {speed}")
+    made = []
+    for n, text in texts:
+        samples, rate = k.create(text, voice=voice, speed=speed, lang="en-us")
+        wav = os.path.join(out, f"{n:02d}.wav")
+        sf.write(wav, samples, rate)
+        made.append((n, to_m4a(wav, os.path.join(out, f"{n:02d}.m4a")), text))
+    return made
+
+
+def synth_say(texts, out, voice, speed):
+    if sys.platform != "darwin":
+        sys.exit("the `say` engine needs macOS. Install kokoro-onnx instead, or skip "
+                 "narrate.py and let the deck use the browser voice.")
+    listing = subprocess.run(["say", "-v", "?"], capture_output=True, text=True).stdout
+    installed = [ln.split("  ")[0].strip() for ln in listing.splitlines() if ln.strip()]
+    if voice and voice not in installed:
+        sys.exit(f"voice {voice!r} not installed. Try: say -v '?'")
+    if not voice:
+        voice = next((v for v in SAY_PREFERRED if v in installed), installed[0])
+        if "Premium" not in voice and "Enhanced" not in voice:
+            print("note: no Premium or Enhanced voice installed, so this will sound "
+                  "robotic.\n      System Settings > Accessibility > Spoken Content > "
+                  "System Voice > Manage Voices\n      Or install kokoro-onnx, which "
+                  "sounds better than any of them.\n")
+    rate = int(180 * speed)
+    print(f"engine: say   voice: {voice}   rate: {rate} wpm")
+    made = []
+    for n, text in texts:
+        aiff = os.path.join(out, f"{n:02d}.aiff")
+        subprocess.run(["say", "-v", voice, "-r", str(rate), "-o", aiff, text], check=True)
+        made.append((n, to_m4a(aiff, os.path.join(out, f"{n:02d}.m4a")), text))
+    return made
 
 
 def main():
-    if sys.platform != "darwin":
-        sys.exit("narrate.py needs macOS `say`. On other platforms skip it and "
-                 "let the deck use the browser voice.")
-    for tool in ("say", "afconvert"):
-        if not shutil.which(tool):
-            sys.exit(f"{tool} not found on PATH")
-
     ap = argparse.ArgumentParser()
     ap.add_argument("lesson")
-    ap.add_argument("--voice", default=None)
-    ap.add_argument("--rate", type=int, default=180, help="words per minute")
+    ap.add_argument("--engine", choices=["auto", "kokoro", "say"], default="auto")
+    ap.add_argument("--voice", default=None,
+                    help="kokoro: af_heart, am_michael, bf_emma ... | say: Ava (Premium)")
+    ap.add_argument("--speed", type=float, default=1.0)
     args = ap.parse_args()
 
     lesson = json.load(open(args.lesson))
@@ -58,23 +114,26 @@ def main():
     out = os.path.join(base, "audio")
     os.makedirs(out, exist_ok=True)
 
-    voice = pick_voice(args.voice)
-    print(f"voice: {voice} at {args.rate} wpm")
+    texts = [(n, s["narration"].strip())
+             for n, s in enumerate(lesson["slides"]) if s.get("narration", "").strip()]
+    if not texts:
+        sys.exit("no narration in this lesson")
 
-    for n, slide in enumerate(lesson["slides"]):
-        text = slide.get("narration", "").strip()
-        if not text:
-            continue
-        aiff = os.path.join(out, f"{n:02d}.aiff")
-        m4a = os.path.join(out, f"{n:02d}.m4a")
-        subprocess.run(["say", "-v", voice, "-r", str(args.rate), "-o", aiff, text], check=True)
-        subprocess.run(["afconvert", "-f", "m4af", "-d", "aac", aiff, m4a],
-                       check=True, capture_output=True)
-        os.remove(aiff)
-        kb = os.path.getsize(m4a) // 1024
-        print(f"  {n:02d}.m4a  {kb:>4} KB  {text[:60]}...")
+    engine = args.engine
+    if engine == "auto":
+        engine = "kokoro" if kokoro_ready() else "say"
+    if engine == "kokoro" and not kokoro_ready():
+        sys.exit(f"kokoro not ready. pip install kokoro-onnx soundfile, then "
+                 f"bin/get-kokoro.sh (looked in {MODEL_DIR})")
 
-    print(f"\ndone. re-run render.py to inline the audio.")
+    if engine == "kokoro":
+        made = synth_kokoro(texts, out, args.voice or KOKORO_DEFAULT, args.speed)
+    else:
+        made = synth_say(texts, out, args.voice, args.speed)
+
+    for n, path, text in made:
+        print(f"  {os.path.basename(path):<10} {os.path.getsize(path)//1024:>4} KB  {text[:56]}...")
+    print("\ndone. re-run render.py to inline the audio.")
 
 
 if __name__ == "__main__":
