@@ -199,7 +199,19 @@ show(0);
 
 
 def esc(s):
-    return (str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+    """HTML-escape. Quotes included: this output also lands inside attributes."""
+    return (str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            .replace('"', "&quot;").replace("'", "&#39;"))
+
+
+def js_json(obj):
+    """JSON safe to drop inside a <script> block.
+
+    `<` only ever occurs inside string literals here, and \\u003c is valid JSON,
+    so escaping it cannot corrupt the structure but does stop a narration
+    containing "</script>" from closing the tag early.
+    """
+    return json.dumps(obj).replace("<", "\\u003c")
 
 
 def build_slide(s, figdir):
@@ -256,7 +268,7 @@ def main():
             .replace("__PAPER__", esc(paper.get("short", paper.get("title", ""))))
             .replace("__VENUE__", esc(paper.get("venue", "")))
             .replace("__SLIDES__", html)
-            .replace("__DATA__", json.dumps(data)))
+            .replace("__DATA__", js_json(data)))
     open(out, "w").write(page)
     kb = os.path.getsize(out) // 1024
     print(f"{len(slides)} slides, audio={'inlined' if audio else 'browser voice'} -> {out} ({kb} KB)")
