@@ -36,8 +36,21 @@ def b64_png(path):
     return "data:image/png;base64," + base64.b64encode(data).decode()
 
 
+AUDIO_MIME = {".m4a": "audio/mp4", ".wav": "audio/wav", ".aiff": "audio/aiff"}
+
+
+def find_audio(audio_dir, n):
+    """narrate.py emits m4a where afconvert exists and wav where it does not,
+    so look for either rather than assuming macOS."""
+    for ext in AUDIO_MIME:
+        p = os.path.join(audio_dir, f"{n:02d}{ext}")
+        if os.path.exists(p):
+            return p
+    return None
+
+
 def b64_audio(path):
-    mime = "audio/mp4" if path.endswith(".m4a") else "audio/aiff"
+    mime = AUDIO_MIME.get(os.path.splitext(path)[1], "audio/mpeg")
     return f"data:{mime};base64," + base64.b64encode(open(path, "rb").read()).decode()
 
 
@@ -232,12 +245,9 @@ def main():
     audio_dir = os.path.join(base, "audio")
     audio = None
     if os.path.isdir(audio_dir):
-        clips = []
-        for n in range(len(slides)):
-            p = os.path.join(audio_dir, f"{n:02d}.m4a")
-            clips.append(b64_audio(p) if os.path.exists(p) else None)
+        clips = [find_audio(audio_dir, n) for n in range(len(slides))]
         if any(clips):
-            audio = clips
+            audio = [b64_audio(p) if p else None for p in clips]
 
     data = {"narration": [s.get("narration", "") for s in slides], "audio": audio}
     paper = lesson.get("paper", {})
