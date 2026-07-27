@@ -27,7 +27,7 @@ in a skill file that Claude Code reads. That means:
 ## Install
 
 ```bash
-git clone https://github.com/YOURNAME/paper-lecture
+git clone https://github.com/abhaymettu/paper-lecture
 cd paper-lecture
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ln -s "$PWD/skills/paper-lecture" ~/.claude/skills/paper-lecture
