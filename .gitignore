@@ -1,0 +1,13 @@
+# Papers and anything derived from them stay local: they are copyrighted.
+*.pdf
+build/
+**/audio/
+**/fig*.png
+**/text.md
+**/figures.json
+lecture.html
+
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
