@@ -62,8 +62,9 @@ Or by hand:
 .venv/bin/python bin/render.py build/paper/lesson.json  # -> lecture.html
 ```
 
-Open `lecture.html`. Arrow keys move, space narrates, click a figure to zoom, CC
-toggles subtitles.
+Open `lecture.html`. Arrow keys move, space plays and pauses the narration, CC
+toggles subtitles, click a figure to zoom. Keyboard shortcuts stand down while you
+are typing an answer.
 
 While narration plays, each spoken sentence appears as a subtitle and the slide dims
 everything except the thing that sentence is about. Timings are real: `narrate.py`
@@ -87,14 +88,29 @@ nearest cluster. Direction never enters into it.
 
 ```
 bin/extract.py    PDF  -> figNN.png + captions + text.md
+bin/check.py      lint a lesson before rendering it
 bin/narrate.py    lesson.json -> audio/NN.m4a        (macOS `say`)
 bin/render.py     lesson.json -> one self-contained lecture.html
+bin/deck.py       lesson.json -> .apkg for Anki (FSRS does the scheduling)
 skills/           the Claude Code skill: how to author a lesson
 examples/         a finished lesson.json to read
 ```
 
 `lesson.json` is the interface between the two halves. Everything above it is Claude's
 judgement; everything below it is deterministic.
+
+## Tests
+
+```bash
+python tests/test_caption_match.py       # caption detection on real paper strings
+python tests/test_check.py               # the linter catches what it claims to
+python tests/test_render_escaping.py     # no HTML or script injection from a lesson
+python tests/test_pipeline.py <pdf-dir>  # extract -> lint -> render -> deck, every PDF
+```
+
+The last one is the useful one. It synthesises a lesson from whatever each PDF
+yields and pushes it through the whole pipeline, so publisher layouts you have
+never hand-tested still get exercised.
 
 ## Note on papers
 

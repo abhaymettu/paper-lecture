@@ -44,6 +44,7 @@ def caption_match(text):
 DPI = 200
 GAP = 18          # pt; ink closer than this is part of the same figure
 PAD = 5           # pt of breathing room around the final crop
+MARGIN = 0.075    # fraction of page height treated as header/footer furniture
 
 
 def captions(page):
@@ -91,6 +92,12 @@ def ink(page):
         if r.width < 26 and r.height > 0.4 * pr.height:   # sidebar stamp ("Downloaded at...")
             continue
         if r.height < 26 and r.width > 0.9 * pr.width:    # header/footer rule
+            continue
+        # Publisher logos and page-number glyphs sit alone in the margins. If a
+        # small mark is entirely inside the top or bottom band it is furniture,
+        # and letting it through drags the whole running head into the crop.
+        if r.get_area() < 0.03 * page_area and (r.y1 < pr.y0 + MARGIN * pr.height
+                                                or r.y0 > pr.y1 - MARGIN * pr.height):
             continue
         keep.append(r)
     return keep
@@ -152,12 +159,23 @@ def grow_to_labels(page, rect, cap_rect, blobs, margin=28):
     near = rect + (-margin, -margin, margin, margin)
     area = rect.get_area()
 
+    # Running heads and page numbers are short, so a length limit alone lets them
+    # in: "Psychological Medicine 383", "SCHREUDER ET AL.", "WILEY 7 of 18". Refuse
+    # anything living in the page margins unless the artwork reaches there too.
+    pr = page.rect
+    band = MARGIN * pr.height
+    head, foot = pr.y0 + band, pr.y1 - band
+
     for x0, y0, x1, y1, text, *_ in page.get_text("blocks"):
         t = text.strip()
         if not t or len(t) > 60 or caption_match(text):
             continue
         b = fitz.Rect(x0, y0, x1, y1)
         if b.intersects(cap_rect) or not b.intersects(near) or b.get_area() > area:
+            continue
+        if b.y1 < head and rect.y0 > head:
+            continue
+        if b.y0 > foot and rect.y1 < foot:
             continue
         grown |= b
 

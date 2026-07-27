@@ -156,7 +156,7 @@ TEMPLATE = r"""<!doctype html>
   <button id="say">▶ Narrate</button>
   <span class="sp"></span>
   <span id="score" class="hint"></span>
-  <span class="hint">&larr;&rarr; move · space narrate · click figure to zoom</span>
+  <span class="hint">&larr;&rarr; move · space play/pause · CC subtitles · click figure to zoom</span>
   <span id="pos"></span>
 </footer>
 <div id="zoom"><img alt=""></div>
@@ -204,12 +204,30 @@ function paint(cue){
   if (target){ sl.classList.add('focusing'); target.classList.add('hot'); }
   else sl.classList.remove('focusing');
 }
+function label(state){
+  document.getElementById('say').textContent =
+    state === 'playing' ? '\u23f8 Pause' : state === 'paused' ? '\u25b6 Resume' : '\u25b6 Narrate';
+}
+// Space and the button toggle: start, then pause, then resume from where it
+// stopped. Cancelling and restarting from the top is not a pause.
+function toggle(){
+  if (audio){
+    if (audio.paused){ audio.play(); label('playing'); }
+    else { audio.pause(); label('paused'); }
+    return;
+  }
+  if (window.speechSynthesis && speechSynthesis.speaking){
+    if (speechSynthesis.paused){ speechSynthesis.resume(); label('playing'); }
+    else { speechSynthesis.pause(); label('paused'); }
+    return;
+  }
+  narrate();
+}
 function narrate(){
   const cues = (DATA.cues && DATA.cues[i]) || null;
   const t = DATA.narration[i];
   if (!t) return;
-  if (audio || speechSynthesis.speaking){ stop(); return; }
-  document.getElementById('say').textContent = '\u25a0 Stop';
+  label('playing');
 
   if (DATA.audio && DATA.audio[i]){
     audio = new Audio(DATA.audio[i]);
@@ -222,8 +240,7 @@ function narrate(){
         if (k !== -1 && k !== last){ last = k; paint(cues[k]); }
       };
     }
-    audio.onended = () => { audio = null; clearFocus();
-                            document.getElementById('say').textContent = '\u25b6 Narrate'; };
+    audio.onended = () => { audio = null; clearFocus(); label('idle'); };
     audio.play();
     return;
   }
@@ -233,8 +250,7 @@ function narrate(){
   const list = cues || [{s: t, f: null}];
   let k = 0;
   const speakNext = () => {
-    if (k >= list.length){ clearFocus();
-                           document.getElementById('say').textContent = '\u25b6 Narrate'; return; }
+    if (k >= list.length){ clearFocus(); label('idle'); return; }
     paint(list[k]);
     const u = new SpeechSynthesisUtterance(list[k].s);
     u.rate = 1.0;
@@ -247,7 +263,7 @@ function narrate(){
 }
 document.getElementById('prev').onclick = () => show(i - 1);
 document.getElementById('next').onclick = () => show(i + 1);
-document.getElementById('say').onclick = narrate;
+document.getElementById('say').onclick = toggle;
 document.getElementById('cc').onclick = () => {
   ccOn = !ccOn;
   localStorage.setItem('paper-lecture:cc', ccOn ? 'on' : 'off');
@@ -256,9 +272,11 @@ document.getElementById('cc').onclick = () => {
 };
 document.getElementById('cc').style.opacity = ccOn ? 1 : .45;
 document.addEventListener('keydown', e => {
+  // The quiz box needs its own spacebar.
+  if (e.target.matches('textarea, input, [contenteditable]')) return;
   if (e.key === 'ArrowRight') show(i + 1);
   else if (e.key === 'ArrowLeft') show(i - 1);
-  else if (e.key === ' '){ e.preventDefault(); narrate(); }
+  else if (e.key === ' '){ e.preventDefault(); toggle(); }
   else if (e.key === 'Escape') document.getElementById('zoom').classList.remove('on');
 });
 // Retrieval practice: you have to produce an answer before you can see one.
