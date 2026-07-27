@@ -87,6 +87,7 @@ TEMPLATE = r"""<!doctype html>
   .check p{margin:0 0 .8rem;font-weight:600}
   .check .ans{display:none;border-top:1px solid var(--line);padding-top:.8rem;margin-top:.3rem}
   .check.open .ans{display:block;animation:fade .3s}
+  .check.open button{display:none}
   .check .ans b{color:var(--ok)}
   button{font:inherit;font-family:ui-sans-serif,system-ui,sans-serif;font-size:.82rem;
          padding:.42rem .9rem;border:1px solid var(--line);background:var(--card);
@@ -106,6 +107,7 @@ TEMPLATE = r"""<!doctype html>
        padding:1.2rem 1.3rem;margin:0 0 1.4rem;box-shadow:var(--shadow)}
   .big p{margin:0}
   @media (max-width:640px){ main{padding:1.2rem .9rem 6rem} h2{font-size:1.3rem} }
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
 </style></head><body>
 <header><b>__PAPER__</b><span>__VENUE__</span></header>
 <div id="bar"><div></div></div>
@@ -168,6 +170,7 @@ document.addEventListener('keydown', e => {
     const c = slides[i].querySelector('.check');
     if (c) c.classList.add('open');
   }
+  else if (e.key === 'Escape') document.getElementById('zoom').classList.remove('on');
 });
 deck.addEventListener('click', e => {
   if (e.target.tagName === 'IMG'){
