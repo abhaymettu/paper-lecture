@@ -1,0 +1,172 @@
+{
+  "paper": {
+    "title": "Critical slowing down as early warning for the onset and termination of depression",
+    "short": "van de Leemput et al. 2014",
+    "authors": "van de Leemput, Wichers, Cramer, Borsboom, Tuerlinckx, Kuppens, ... Scheffer",
+    "venue": "PNAS 111(1) 87-92",
+    "file": "12_vandeLeemput_2014_critical-slowing-down-depression.pdf"
+  },
+  "slides": [
+    {
+      "kicker": "The claim",
+      "title": "Mood might have tipping points, and tipping points announce themselves",
+      "big": "If depression is a system with alternative stable states, then the approach to a transition should be visible in the statistics of everyday mood, before the transition happens.",
+      "points": [
+        "Borrowed wholesale from ecology and climate science, where the same signature precedes lake eutrophication and regime shifts.",
+        "The promise is a warning system that needs no mechanistic model of depression, only a mood time series.",
+        "Nine of the twenty authors are psychologists, one is a lake ecologist (Scheffer). That combination is the paper."
+      ],
+      "narration": "This paper makes a bold move. It takes an idea from ecology, that systems near a tipping point behave in a statistically distinctive way, and applies it to human mood. If it works, you could anticipate a depressive episode from someone's daily mood ratings, without understanding the biology at all. Keep that promise in mind, because the rest of the paper is about whether the evidence actually supports it."
+    },
+    {
+      "kicker": "Mechanism",
+      "title": "Why a system slows down near a tipping point",
+      "points": [
+        "Picture a ball in a valley. The valley walls are the forces pulling you back to normal after a bad day.",
+        "As conditions worsen, the valley gets shallower. The walls are less steep, so the restoring force is weaker.",
+        "A weaker restoring force means the ball takes longer to return after a nudge. That is critical slowing down.",
+        "Formally: the dominant eigenvalue governing return rate approaches zero at the bifurcation."
+      ],
+      "narration": "Here is the intuition. Imagine your mood as a ball sitting in a valley. When something knocks you off centre, the slope of the valley pushes you back. Now imagine the valley slowly flattening out. The slope is gentler, so the push back is weaker, and you take longer to recover from each knock. That slowness is the whole phenomenon. It is called critical slowing down, and it happens right before the valley disappears entirely.",
+      "check": {
+        "q": "The valley is flattening. Before anything visibly changes about the person's average mood, what happens to how long a bad day lasts?",
+        "a": "It gets longer.",
+        "why": "That lengthening is the signal. Average mood can look completely stable while the recovery time quietly stretches out. This is why the method could in principle warn you early."
+      }
+    },
+    {
+      "kicker": "Mechanism",
+      "title": "Slowing down leaves three statistical fingerprints",
+      "points": [
+        "Variance rises. Perturbations are not damped as quickly, so the system wanders further from centre.",
+        "Temporal autocorrelation rises, measured as AR(1). Today's mood resembles yesterday's more closely, because recovery is slow.",
+        "Cross-correlation between components rises. The parts of the system start moving as one.",
+        "None of these require knowing what causes depression. That generality is the selling point."
+      ],
+      "narration": "Slowness shows up three ways in the data. First, variance goes up, because perturbations are not being damped out. Second, autocorrelation goes up, because if you recover slowly then today looks a lot like yesterday. Third, the different parts of the system become more correlated with each other, moving together instead of independently. Remember these three, because the empirical half of the paper is just measuring each one."
+    },
+    {
+      "kicker": "Figure 1",
+      "title": "The model: same system, two distances from the edge",
+      "figure": "fig01.png",
+      "figureLabel": "Figure 1",
+      "figureNote": "Left column is far from the transition, right column is close to it. A and B are the ball-in-a-cup pictures. C and D are simulated emotion time series. E and G show variance, F and H show autocorrelation, I through L show cross-correlations. Every right-hand panel is the same measurement as its left-hand partner, taken closer to the tipping point.",
+      "points": [
+        "This is a Lotka-Volterra model of four emotions: cheerful, content, sad, anxious.",
+        "Same-valence emotions reinforce each other, opposite-valence emotions compete.",
+        "Read across, not down: AR(1) goes 0.38 to 0.77, within-valence correlation 0.29 to 0.69, between-valence -0.47 to -0.83.",
+        "This is a simulation, not data. It establishes what the signal should look like if the theory is right."
+      ],
+      "narration": "This figure is a simulation, not real data, and that matters. The left column is the model far from a tipping point, the right column is the same model close to one. Look at the numbers rather than the shapes. Autocorrelation doubles, from 0.38 to 0.77. Within-valence correlation goes from 0.29 to 0.69. Between-valence correlation strengthens from minus 0.47 to minus 0.83. This is the pattern the authors will go looking for in real people.",
+      "check": {
+        "q": "Panels C and D show the raw simulated emotion series. Just by eye, is the mean level obviously different between them?",
+        "a": "No. The mean looks broadly similar, but D is visibly wigglier and its swings are more sustained.",
+        "why": "This is the entire pitch of the method. The thing that changes first is not the level of mood but its texture. A clinician tracking average mood would see nothing yet."
+      }
+    },
+    {
+      "kicker": "Data",
+      "title": "Two samples, four emotions, six days",
+      "points": [
+        "General population, n = 535, drawn from a twin study. 13.5 percent later met DSM-IV criteria for MDD.",
+        "Currently depressed patients, n = 93, tracked for whether they improved.",
+        "Experience Sampling Method: beeped repeatedly per day for 5 to 6 consecutive days, rating cheerful, content, sad, anxious.",
+        "Follow-up measured the change in depressive symptoms after the sampling window."
+      ],
+      "narration": "Now the real data. Two groups. Five hundred thirty five people from the general population, of whom about one in seven later developed clinical depression. And ninety three people who were already depressed, tracked to see who got better. Everyone carried a device that beeped at them for five to six days, asking how cheerful, content, sad and anxious they felt. That short window is worth remembering."
+    },
+    {
+      "kicker": "Figure 2",
+      "title": "Autocorrelation and variance rise ahead of a transition",
+      "figure": "fig02.png",
+      "figureLabel": "Figure 2",
+      "figureNote": "Left column is negative emotions in the general population, sorted by how much their depression worsened later. Right column is positive emotions in patients, sorted by how much they recovered. Top row is autocorrelation, bottom row is variance. The x axis is tertiles: low, medium, high. Every line slopes upward.",
+      "points": [
+        "Both indicators increase across tertiles of future change, in both samples.",
+        "Asymmetry worth noticing: negative emotions carry the signal for worsening, positive emotions carry it for recovery.",
+        "Error bars are standard errors. The separation between low and high tertiles is real but not dramatic.",
+        "Asterisks mark a significant overall trend; letters a, b, c mark which tertiles differ from each other."
+      ],
+      "narration": "Here is the headline result. Along the bottom, people are sorted into thirds by how much their depression changed afterwards. On the left, people in the general population who got worse. On the right, patients who got better. Both autocorrelation and variance climb as you move toward larger future change. Notice the asymmetry: heading into depression, the signal lives in the negative emotions, while heading out of it, the signal lives in the positive ones.",
+      "check": {
+        "q": "Why might the warning signal sit in negative emotions for people heading down, but positive emotions for people heading up?",
+        "a": "Because the system is approaching a different attractor each time.",
+        "why": "Slowing down shows up most in the components that are about to take over. Moving toward depression, negative emotions are the rising state, so they are the ones losing their damping. Moving toward recovery, positive emotions play that role. This is a real prediction of the theory, and the data match it, which is a genuine point in the paper's favour."
+      }
+    },
+    {
+      "kicker": "Figure 3",
+      "title": "Emotions become more tightly coupled",
+      "figure": "fig03.png",
+      "figureLabel": "Figure 3",
+      "figureNote": "Same tertile layout as Figure 2. A and B show correlations between emotions of the same valence, C and D between opposite valences. Same-valence correlations get more positive, opposite-valence correlations get more negative. Both mean the same thing: stronger coupling.",
+      "points": [
+        "The third fingerprint, and per the authors the most trustworthy one.",
+        "The sign flips are expected: same-valence emotions move together, opposite-valence emotions move against each other.",
+        "Note the model in Figure 1 predicted exactly this structure, which is a modest independent check.",
+        "Read a negative correlation getting more negative as coupling getting stronger, not weaker."
+      ],
+      "narration": "The third signal. As people approach a transition, their emotions stop moving independently and start moving as a bloc. Cheerful and content rise and fall together more tightly. Cheerful and sad push against each other more strongly. Watch the sign here, because a correlation going from minus 0.4 to minus 0.8 is getting stronger, not weaker. Both directions mean the same thing, the system is becoming more rigid."
+    },
+    {
+      "kicker": "The authors' own caveat",
+      "title": "They do not trust variance as much as you might expect",
+      "points": [
+        "Variance can be confounded by a trend in the mean. If mood is getting worse on average, variance often follows mechanically.",
+        "Variance can also rise simply because the world got noisier, with no change in resilience at all.",
+        "Autocorrelation and cross-correlation are independent of both the mean and the noise amplitude.",
+        "So the authors rank correlation as their most robust indicator, and hedge on variance in their own text."
+      ],
+      "narration": "Here is something easy to miss, and it is the authors criticising their own result. Variance is the weakest of the three signals. It can rise just because average mood is drifting, or because life happened to get more stressful, neither of which has anything to do with losing resilience. Autocorrelation and cross-correlation do not have that problem. When you read this literature, weight the correlation results more heavily than the variance ones.",
+      "check": {
+        "q": "Someone shows rising variance in mood but flat autocorrelation. What is the most likely explanation?",
+        "a": "External noise increased. The system was perturbed harder, but its resilience did not change.",
+        "why": "Critical slowing down predicts all three signals together. Variance alone is the signature of a bumpier environment, not a flattening valley. Isolated variance findings should not be read as early warning."
+      }
+    },
+    {
+      "kicker": "The load-bearing problem",
+      "title": "Every one of these results is between people, not within a person",
+      "big": "The tertiles on the x axis of Figures 2 and 3 are groups of different individuals. Nobody in this paper was shown to slow down as their own transition approached.",
+      "points": [
+        "The claim that motivates the paper is within-person: this individual is approaching their tipping point.",
+        "The evidence delivered is between-person: people who later worsened had, on average, higher AR(1) during their sampling week.",
+        "Those are different statements, and the second does not establish the first.",
+        "Stable individual differences would produce exactly this pattern with no tipping point anywhere."
+      ],
+      "narration": "Now the problem that the next paper in your folder is entirely about. Look again at the x axis of those figures. Those thirds are groups of different people. What the paper shows is that people who later got worse had higher autocorrelation than people who did not. What it wanted to show is that a given person's autocorrelation rises as their own transition approaches. Those are not the same claim, and the first does not get you the second.",
+      "check": {
+        "q": "Suppose some people are simply sluggish moods, high AR(1) all the time, and those people are also more prone to depression. Would this paper's figures look any different?",
+        "a": "No. They would look exactly the same.",
+        "why": "That is the whole critique. A stable trait that correlates with risk reproduces every result here without any tipping point, any slowing down, or any approach to a bifurcation. Distinguishing the two requires watching individuals over time, which is what papers 14 through 16 in your folder attempt."
+      }
+    },
+    {
+      "kicker": "Also worth holding",
+      "title": "Three smaller limits",
+      "points": [
+        "Five to six days is a very short window from which to estimate an autocorrelation, let alone a trend in one.",
+        "The authors themselves say not everyone need have tipping points. Some people may move smoothly, with no bifurcation to detect.",
+        "Effect sizes are modest. This separates groups on average, it does not identify individuals at risk.",
+        "The smartphone early warning app in the discussion is a hope, not a demonstrated result."
+      ],
+      "narration": "Three more things to keep in your pocket. The sampling window is only five or six days, which is thin for estimating an autocorrelation reliably. The authors concede that some people may not have tipping points at all and would simply drift. And the effects, while statistically real, separate groups on average rather than flagging individuals. The smartphone warning system in the discussion section is an aspiration, not something this paper delivered."
+    },
+    {
+      "kicker": "Where this sits",
+      "title": "What to carry into the rest of the folder",
+      "points": [
+        "Paper 13 is Bos and De Jonge making the between-person critique formally, plus the authors' reply. Read it next, immediately.",
+        "Paper 14, Wichers 2016, is the single-case answer: one person, 239 days, genuinely within-person.",
+        "Paper 15 is that case's open dataset, which is what you would reanalyse yourself.",
+        "Papers 17 and 18 are the field's own verdict on whether any of this survived the decade."
+      ],
+      "narration": "So where does this leave you. This paper opened a genuinely important line of work and its core mechanism is sound physics. What it did not do is demonstrate that mechanism within individual people. Read the critique next, it is two pages and it is the single highest value thing in the folder right after this. Then Wichers 2016, which is the honest attempt to do it properly in one person over 239 days.",
+      "check": {
+        "q": "For your own early warning simulation work, what is the one design requirement this paper's weakness implies?",
+        "a": "The indicator has to be estimated within a single person's time series, and validated against that same person's transitions.",
+        "why": "Any between-person comparison, however large, cannot separate a trait from an approach to a tipping point. Your null calibration work is testing exactly whether a within-person rising trend can be detected reliably at realistic series lengths, which is the question this paper left open."
+      }
+    }
+  ]
+}
